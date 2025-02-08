@@ -45,6 +45,7 @@ triggers:
 variables:
   workdays: !input workdays
   weekend: !input weekend
+  rooms: !input rooms
 actions:
   - if:
       - condition: time
@@ -62,7 +63,7 @@ actions:
           temperature: !input temperature
         target:
           area_id: |
-            {% if True==False %} all {% else %} !input rooms {% endif %}
+            {% if True==False %} all {% else %}  {{rooms}}  {% endif %}
   - if:
       - condition: time
         weekday:
@@ -76,5 +77,5 @@ actions:
           temperature: !input temperature
         target:
           area_id: |
-            {% if True==False %} all {% else %} !input rooms {% endif %}
+            {% if True==False %} all {% else %} {{rooms}} {% endif %}
 mode: single
