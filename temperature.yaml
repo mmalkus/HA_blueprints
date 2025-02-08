@@ -1,0 +1,80 @@
+blueprint:
+  name: Blueprint for temperature control
+  description: ''
+  domain: automation
+  input:
+    start_time:
+      name: Start time 
+      description: Start time for the automation
+      selector:
+        time:
+    workdays:
+      name: Active during workweek
+      selector:
+        boolean:
+    weekend:
+      name: Active during weekend
+      selector:
+        boolean:
+    temperature:
+      name: Target temperature
+      selector:
+        number:
+          min: 15
+          max: 25
+          step: 0.5
+          unit_of_measurement: °C
+    rooms:
+      name: Rooms affected
+      selector:
+        area:
+          entity:
+            domain: climate
+    all:
+      name: All rooms
+      description: Overwrite previous selection
+      selector:
+        boolean:
+
+mode: single
+max_exceeded: silent  
+
+triggers:
+  - trigger: time
+    at: !input start_time
+variables:
+  workdays: !input workdays
+  weekend: !input weekend
+actions:
+  - if:
+      - condition: time
+        weekday:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+      - condition: template
+        value_template: "{{ workdays == true }}"
+    then:
+      - action: climate.set_temperature
+        data:
+          temperature: !input temperature
+        target:
+          area_id: |
+            {% if True==False %} all {% else %} !input rooms {% endif %}
+  - if:
+      - condition: time
+        weekday:
+          - sat
+          - sun
+      - condition: template
+        value_template: "{{ weekend == true }}"
+    then:
+      - action: climate.set_temperature
+        data:
+          temperature: !input temperature
+        target:
+          area_id: |
+            {% if True==False %} all {% else %} !input rooms {% endif %}
+mode: single
