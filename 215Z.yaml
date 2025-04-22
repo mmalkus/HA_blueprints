@@ -1,0 +1,267 @@
+blueprint:
+  name: 215Z - multi click + dimming
+  author: Maurits Malkus
+  description: 'Blueprint for 215Z, instead of directly selecting scenes, a scene prefex is used, e.g. if the prefix is 'kitchen' pressing button 3, 2 times it starts scene kitchen_3_2 '
+  homeassistant:
+    min_version: 2024.6.0.
+  domain: automation
+  input:
+    controller_MQTT:
+      name: Controller and MQTT information
+      description: All inputs related to the controller and MQTT
+      input:
+        base_topic:
+          name: (Zigbee2MQTT) Base mqtt topic
+          description: The base topic as configured in z2m
+          default: zigbee2mqtt
+        controller:
+          name: (Zigbee2MQTT) Controller Name
+          description: The name of the controller as defined in z2m (e.g. Livingroom Switch)
+          default: ""
+        controller_event:
+          name: Controller event
+          description: Only needed when a media_player is used
+          selector:
+            entity:
+              filter: 
+                - domain: event
+                  integration: MQTT
+    target_left:
+      name: Entity for left buttons
+      description: Setting for left pair of buttons (button 1 and 2)
+      input:
+        left_type: 
+          name: Type of entity
+          description: Type of entity linked to the holding the buttons
+          selector:
+            select:
+              options:
+                - light
+                - media_player
+        left_target_media:
+          name: Target (in case of media_player)
+          description: Only needed for media player
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+        left_target_light:
+          name: (Zigbee2MQTT) target name (in case of light)
+          description: Only needed for light
+    target_left:
+      name: Entity for right buttons
+      description: Setting for right pair of buttons (button 1 and 2)
+      input:
+        right_type: 
+          name: Type of entity
+          description: Type of entity linked to the holding the buttons
+          selector:
+            select:
+              options:
+                - light
+                - media_player
+        right_target_media:
+          name: Target (in case of media_player)
+          description: Only needed for media player
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+        right_target_light:
+          name: (Zigbee2MQTT) target name (in case of light)
+          description: Only needed for light
+    others:
+      name: Other variables
+      input:
+        scene_prefix:
+          name: Scene prefix
+          description: This prefix is used for short presses, e.g. if prefix is 'kitchen', pressing butting 2, 3 times will trigger event: 'kitchen_2_3'
+        hold_delay:
+          name: Hold delay
+          description: Ammount of milliseconds after which a press will be percieved as a Hold
+          default: 500
+          selector:
+            number:
+              min: 100
+              max: 1000
+              unit_of_measurement: milliseconds
+        dim_speed:
+          name: Dimming Speed
+          description: The speed of the dimming effect. 
+          default: 50
+          selector:
+            number:
+              min: 1
+              max: 500
+              step: 1
+        volume_speed:
+          name: Volume adjustment Speed
+          description: The speed of the volume adjustment effect. 
+          default: 0.05
+          selector:
+            number:
+              min: 0.01
+              max: .1
+              step: .01
+
+          
+          
+                
+        
+    base_topic:
+      name: (Zigbee2MQTT) Base mqtt topic
+      description: The base topic as configured in z2m
+      default: zigbee2mqtt
+    target:
+      name: HA device name, action entity
+      description: The entity from HA
+      selector:
+        entity:
+          domain: light
+          multiple: true 
+    dim_speed:
+      name: Dimming Speed
+      description: The speed of the dimming effect. 
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 500
+          step: 1
+    hold_delay:
+      name: Hold delay
+      description:
+        If the button has been held more than the configured Hold delay, the corresponding held action is triggered.
+      default: 500
+      selector:
+        number:
+          min: 100.0
+          max: 1000.0
+          unit_of_measurement: milliseconds
+          mode: box
+          step: 10.0
+  source_url: https://raw.githubusercontent.com/mmalkus/HA_blueprints/refs/heads/main/215Z.yml
+triggers:
+  - trigger: mqtt
+    topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+    payload: press_1
+  - trigger: mqtt
+    topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+    payload: press_2
+  - trigger: mqtt
+    topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+    payload: press_3
+  - trigger: mqtt
+    topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+    payload: press_4
+conditions: []
+actions:
+  - variables:
+      button: "{{ trigger.payload.split('_')[1] }}"
+      release: "{{ 'release_' ~ button }}"
+      press: "{{ 'press_' ~ button }}"
+      invert: "{{ 2*(button % 2) -1 }}"
+      type: >-
+        {% if button in [1,2] %} {{left_type}}  {% else %} {{right_type}} {%
+        endif %}
+      left_target: >-
+        {% if type == 'light' %} {{left_target_light}} {% elif type == 'media_player' %} {{left_target_media}} {%
+        endif %}      
+      right_target: >-
+        {% if type == 'light' %} {{right_target_light}} {% elif type == 'media_player' %} {{right_target_media}} {%
+        endif %}
+      target: >-
+        {% if button in [1,2] %} {{left_target}} {% else %} {{right_target}} {%
+        endif %}
+  - repeat:
+      count: 5
+      sequence:
+        - wait_for_trigger:
+            - trigger: mqtt
+              topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+              payload: "{{ release }}"
+          timeout:
+            milliseconds: "{{ hold_delay }}"
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ wait.trigger == None  and repeat.index == 1}}"
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ type == 'light'}}"
+                      sequence:
+                        - alias: Action when button is held for light
+                          action: mqtt.publish
+                          data:
+                            topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
+                            payload: "{\"brightness_move_onoff\": {{ dim_speed * invert }} }"
+                        - wait_for_trigger:
+                            - trigger: mqtt
+                              topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+                              payload: "{{ release }}"
+                          timeout:
+                            seconds: 5
+                        - alias: Action when button is held and released
+                          action: mqtt.publish
+                          metadata: {}
+                          data:
+                            topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
+                            payload: "{\"brightness_move\": \"stop\"}"
+                        - stop: ""
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ type == 'media_player'}}"
+                      sequence:
+                        - alias: Action when button is held for media_player
+                          repeat:
+                            sequence:
+                              - data_template:
+                                  entity_id: "{{ target }}"
+                                  volume_level: >-
+                                    {{ state_attr(target, 'volume_level') +
+                                    volume_speed * invert }}
+                                action: media_player.volume_set
+                              - delay:
+                                  milliseconds: 200
+                            until:
+                              - condition: template
+                                value_template: >-
+                                  {{ state_attr(controller_event, 'event_type') ==
+                                  release }}
+                - stop: ""
+          default:
+            - wait_for_trigger:
+                - trigger: mqtt
+                  topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
+                  payload: "{{ press }}"
+              timeout:
+                milliseconds: "{{ hold_delay }}"
+            - if:
+                - condition: template
+                  value_template: "{{ wait.trigger == None }}"
+              then:
+                - alias: Action when short pressed a number of times
+                  action: scene.turn_on
+                  target:
+                    entity_id: >-
+                      {{ 'scene.' ~ scene_prefix ~ '_' ~ button ~ '_' ~
+                      repeat.index }}
+                - stop: ""
+mode: single
+trigger_variables:
+  base_topic: !input zigbee2mqtt
+  controller: !input controller
+variables:
+  left_type: !input left_type
+  right_type: !input right_type
+  hold_delay: !input hold_delay
+  controller_event: !input controller_event
+  left_target_light: !input left_target_light
+  right_target_light: !input right_target_light
+  left_target_media: !input left_target_media
+  right_target_media: !input right_target_media
+  scene_prefix: !input scene_prefix
+  dim_speed: !input dim_speed
+  volume_speed: !input volume_speed
