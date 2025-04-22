@@ -103,43 +103,6 @@ blueprint:
               min: 0.01
               max: .1
               step: .01
-
-          
-          
-                
-        
-    base_topic:
-      name: (Zigbee2MQTT) Base mqtt topic
-      description: The base topic as configured in z2m
-      default: zigbee2mqtt
-    target:
-      name: HA device name, action entity
-      description: The entity from HA
-      selector:
-        entity:
-          domain: light
-          multiple: true 
-    dim_speed:
-      name: Dimming Speed
-      description: The speed of the dimming effect. 
-      default: 50
-      selector:
-        number:
-          min: 1
-          max: 500
-          step: 1
-    hold_delay:
-      name: Hold delay
-      description:
-        If the button has been held more than the configured Hold delay, the corresponding held action is triggered.
-      default: 500
-      selector:
-        number:
-          min: 100.0
-          max: 1000.0
-          unit_of_measurement: milliseconds
-          mode: box
-          step: 10.0
   source_url: https://raw.githubusercontent.com/mmalkus/HA_blueprints/refs/heads/main/215Z.yml
 triggers:
   - trigger: mqtt
