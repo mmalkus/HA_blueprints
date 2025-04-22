@@ -75,7 +75,7 @@ blueprint:
       input:
         scene_prefix:
           name: Scene prefix
-          description: This prefix is used for short presses, e.g. if prefix is 'kitchen', pressing butting 2, 3 times will trigger event: 'kitchen_2_3'
+          description: "This prefix is used for short presses, e.g. if prefix is 'kitchen', pressing butting 2, 3 times will trigger event: 'kitchen_2_3'"
         hold_delay:
           name: Hold delay
           description: Ammount of milliseconds after which a press will be percieved as a Hold
