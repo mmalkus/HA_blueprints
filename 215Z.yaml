@@ -48,9 +48,10 @@ blueprint:
         left_target_light:
           name: (Zigbee2MQTT) target name (in case of light)
           description: Only needed for light
-    target_left:
+          default: ""
+    target_right:
       name: Entity for right buttons
-      description: Setting for right pair of buttons (button 1 and 2)
+      description: Setting for right pair of buttons (button 3 and 4)
       input:
         right_type: 
           name: Type of entity
@@ -70,6 +71,7 @@ blueprint:
         right_target_light:
           name: (Zigbee2MQTT) target name (in case of light)
           description: Only needed for light
+          default: ""
     others:
       name: Other variables
       input:
@@ -214,7 +216,7 @@ actions:
                 - stop: ""
 mode: single
 trigger_variables:
-  base_topic: !input zigbee2mqtt
+  base_topic: !input base_topic
   controller: !input controller
 variables:
   left_type: !input left_type
