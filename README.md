@@ -1,5 +1,6 @@
 # 215Z blueprint
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://buymeacoffee.com/mauritsmalkus)
+
 This blueprint is based on the work of vandalon, khvej8 and others as found in https://community.home-assistant.io/t/zigbee2mqtt-enocean-ptm-215z-friends-of-hue-switch/429770/ but recognized multi clicks and support media_players
 
 ## Setup of the blueprint
