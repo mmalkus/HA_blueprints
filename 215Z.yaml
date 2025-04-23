@@ -78,6 +78,12 @@ blueprint:
         scene_prefix:
           name: Scene prefix
           description: "This prefix is used for short presses, e.g. if prefix is 'kitchen', pressing butting 2, 3 times will trigger event: 'kitchen_2_3'"
+        default_single_click:
+          name: If on, a single click turns on / off the device
+          description: The top button turns the device on, the lower button turns it off
+          default: true
+          selector:
+            boolean:
         hold_delay:
           name: Hold delay
           description: Ammount of milliseconds after which a press will be percieved as a Hold
@@ -199,7 +205,7 @@ actions:
                 - stop: ""
             - conditions:
                 - condition: template
-                  value_template: "{{ wait.trigger != None  and repeat.index == 1}}"
+                  value_template: "{{ wait.trigger != None  and repeat.index == 1 and default_single_click}}"
               sequence:
                 - choose:
                     - conditions:
@@ -264,3 +270,4 @@ variables:
   scene_prefix: !input scene_prefix
   dim_speed: !input dim_speed
   volume_speed: !input volume_speed
+  default_single_click: !input default_single_click
