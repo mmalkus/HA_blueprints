@@ -25,7 +25,7 @@ blueprint:
             entity:
               filter: 
                 - domain: event
-                  integration: MQTT
+                  integration: mqtt
     target_left:
       name: Entity for left buttons
       description: Setting for left pair of buttons (button 1 and 2)
@@ -105,7 +105,7 @@ blueprint:
               min: 0.01
               max: .1
               step: .01
-  source_url: https://raw.githubusercontent.com/mmalkus/HA_blueprints/refs/heads/main/215Z.yml
+  source_url: https://raw.githubusercontent.com/mmalkus/HA_blueprints/refs/heads/main/215Z.yaml
 triggers:
   - trigger: mqtt
     topic: "{{ base_topic ~ '/' ~ controller ~ '/action'}}"
