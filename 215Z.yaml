@@ -217,7 +217,7 @@ actions:
                           metadata: {}
                           data:
                             topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
-                            payload: "{\"state\": \" {{ on_off }} \"}"
+                            payload: "{\"state\": \" {{on_off}} \"}"
                     - conditions:
                         - condition: template
                           value_template: "{{ type == 'media_player' and on_off == 'on'}}"
