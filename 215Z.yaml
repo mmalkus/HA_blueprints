@@ -204,40 +204,7 @@ actions:
                                 value_template: >-
                                   {{ state_attr(controller_event, 'event_type') ==
                                   release }}
-                - stop: ""
-            - conditions:
-                - condition: template
-                  value_template: "{{ wait.trigger != None  and repeat.index == 1 and default_single_click}}"
-              sequence:
-                - choose:
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ type == 'light' }}"
-                      sequence:
-                        - alias: Turn on/off  light
-                          action: mqtt.publish
-                          metadata: {}
-                          data:
-                            topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
-                            payload: "{\"state\": \"{{ on_off }}\"}"
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ type == 'media_player' and on_off == 'on'}}"
-                      sequence:
-                        - alias: Turn on/off media player
-                          action: media_player.media_play
-                          data_template:
-                            entity_id: "{{ target }}" 
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ type == 'media_player' and on_off == 'off'}}"
-                      sequence:
-                        - alias: Turn on/off media player
-                          action: media_player.media_pause
-                          data_template:
-                            entity_id: "{{ target }}" 
-                - stop: ""
-                  
+                - stop: ""        
           default:
             - wait_for_trigger:
                 - trigger: mqtt
@@ -245,17 +212,51 @@ actions:
                   payload: "{{ press }}"
               timeout:
                 milliseconds: "{{ hold_delay }}"
-            - if:
-                - condition: template
-                  value_template: "{{ wait.trigger == None }}"
-              then:
-                - alias: Action when short pressed a number of times
-                  action: scene.turn_on
-                  target:
-                    entity_id: >-
-                      {{ 'scene.' ~ scene_prefix ~ '_' ~ button ~ '_' ~
-                      repeat.index }}
-                - stop: ""
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger == None and (default_single_click == false or repeat.index > 1) }}"
+                  sequence:
+                    - alias: Action when short pressed a number of times
+                      action: scene.turn_on
+                      target:
+                        entity_id: >-
+                          {{ 'scene.' ~ scene_prefix ~ '_' ~ button ~ '_' ~
+                          repeat.index }}
+                    - stop: ""        
+                - conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger == None and repeat.index == 1 and default_single_click}}"
+                  sequence:
+                    - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ type == 'light' }}"
+                          sequence:
+                            - alias: Turn on/off  light
+                              action: mqtt.publish
+                              metadata: {}
+                              data:
+                                topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
+                                payload: "{\"state\": \"{{ on_off }}\"}"
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ type == 'media_player' and on_off == 'on'}}"
+                          sequence:
+                            - alias: Turn on/off media player
+                              action: media_player.media_play
+                              data_template:
+                                entity_id: "{{ target }}" 
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ type == 'media_player' and on_off == 'off'}}"
+                          sequence:
+                            - alias: Turn on/off media player
+                              action: media_player.media_pause
+                              data_template:
+                                entity_id: "{{ target }}" 
+                    - stop: ""
+                
 mode: single
 trigger_variables:
   base_topic: !input base_topic
