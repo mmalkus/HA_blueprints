@@ -3,7 +3,7 @@ blueprint:
   author: Maurits Malkus
   description: "Blueprint for 215Z, instead of directly selecting scenes, a scene prefex is used, e.g. if the prefix is 'kitchen' pressing button 3, 2 times it starts scene kitchen_3_2 '"
   homeassistant:
-    min_version: 2024.6.0.
+    min_version: 2024.6.0
   domain: automation
   input:
     controller_MQTT:
