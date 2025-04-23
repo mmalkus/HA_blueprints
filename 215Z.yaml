@@ -138,6 +138,8 @@ actions:
       target: >-
         {% if button in [1,2] %} {{left_target}} {% else %} {{right_target}} {%
         endif %}
+      on_off: >-
+        {% if invert == 1 %} on {% else %} off {% endif %}
   - repeat:
       count: 5
       sequence:
@@ -174,7 +176,6 @@ actions:
                           data:
                             topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
                             payload: "{\"brightness_move\": \"stop\"}"
-                        - stop: ""
                     - conditions:
                         - condition: template
                           value_template: "{{ type == 'media_player'}}"
@@ -196,6 +197,39 @@ actions:
                                   {{ state_attr(controller_event, 'event_type') ==
                                   release }}
                 - stop: ""
+            - conditions:
+                - condition: template
+                  value_template: "{{ wait.trigger != None  and repeat.index == 1}}"
+              sequence:
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ type == 'light' }}"
+                      sequence:
+                        - alias: Turn on/off  light
+                          action: mqtt.publish
+                          metadata: {}
+                          data:
+                            topic: "{{ base_topic ~ '/' ~ target ~ '/set'}}"
+                            payload: "{\"state\": \" {{ on_off }} \"}"
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ type == 'media_player' and on_off == 'on'}}"
+                      sequence:
+                        - alias: Turn on/off media player
+                          action: media_player.media_play
+                          data_template:
+                            entity_id: "{{ target }}" 
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ type == 'media_player' and on_off == 'off'}}"
+                      sequence:
+                        - alias: Turn on/off media player
+                          action: media_player.media_pause
+                          data_template:
+                            entity_id: "{{ target }}" 
+                - stop: ""
+                  
           default:
             - wait_for_trigger:
                 - trigger: mqtt
