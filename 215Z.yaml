@@ -41,6 +41,7 @@ blueprint:
         left_target_media:
           name: Target (in case of media_player)
           description: Only needed for media player
+          default: 
           selector:
             entity:
               filter:
@@ -64,6 +65,7 @@ blueprint:
         right_target_media:
           name: Target (in case of media_player)
           description: Only needed for media player
+          default:
           selector:
             entity:
               filter:
