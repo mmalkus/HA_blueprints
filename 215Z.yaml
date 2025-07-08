@@ -21,6 +21,7 @@ blueprint:
         controller_event:
           name: Controller event
           description: Only needed when a media_player is used
+          default: ""
           selector:
             entity:
               filter: 
