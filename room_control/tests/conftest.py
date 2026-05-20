@@ -33,5 +33,17 @@ def _make_ha_stubs() -> None:
     sys.modules["homeassistant.helpers.config_validation"] = cv
     helpers.config_validation = cv
 
+    # homeassistant.helpers.entity_registry
+    er = types.ModuleType("homeassistant.helpers.entity_registry")
+    er.async_get = lambda hass: None  # type: ignore[attr-defined]
+    sys.modules["homeassistant.helpers.entity_registry"] = er
+    helpers.entity_registry = er
+
+    # homeassistant.helpers.device_registry
+    dr = types.ModuleType("homeassistant.helpers.device_registry")
+    dr.async_get = lambda hass: None  # type: ignore[attr-defined]
+    sys.modules["homeassistant.helpers.device_registry"] = dr
+    helpers.device_registry = dr
+
 
 _make_ha_stubs()
