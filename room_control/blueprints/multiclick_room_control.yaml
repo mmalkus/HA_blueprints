@@ -1,0 +1,162 @@
+blueprint:
+  name: Multi-Click — Room Control
+  author: Maurits Malkus
+  description: >
+    Activate scenes by clicking a switch multiple times.
+    Compatible with room_control naming: scenes are named
+    {scene_prefix}_{button}_{clicks}, e.g. living_room_1_2 for 2 clicks on button 1.
+    Supports Zigbee2MQTT (MQTT), ZHA events, and state triggers.
+  homeassistant:
+    min_version: 2024.6.0
+  domain: automation
+  input:
+    scene_prefix:
+      name: Scene prefix (= area_id)
+      description: Used to build scene/script names, e.g. 'living_room'
+      selector:
+        text: {}
+
+    button:
+      name: Button number
+      description: Which button number to use in scene name (1–4)
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 4
+          mode: box
+
+    trigger_type:
+      name: Trigger type
+      selector:
+        select:
+          options:
+            - label: Zigbee2MQTT (MQTT topic)
+              value: z2m
+            - label: ZHA event
+              value: zha
+            - label: State change (binary_sensor / switch)
+              value: state
+
+    mqtt_topic:
+      name: "[Z2M] MQTT Topic"
+      default: ""
+      selector:
+        text: {}
+
+    click_action_payload:
+      name: "[Z2M] Single-click payload"
+      default: "single"
+      selector:
+        text: {}
+
+    zha_device:
+      name: "[ZHA] Device"
+      default: {}
+      selector:
+        device:
+          integration: zha
+
+    zha_command:
+      name: "[ZHA] Click command"
+      default: "toggle"
+      selector:
+        text: {}
+
+    state_entity:
+      name: "[State] Entity"
+      default: ""
+      selector:
+        entity:
+          domain:
+            - binary_sensor
+            - input_boolean
+            - switch
+
+    max_clicks:
+      name: Maximum clicks
+      default: 4
+      selector:
+        number:
+          min: 1
+          max: 6
+          mode: slider
+
+    click_timeout:
+      name: Click timeout (ms)
+      default: 500
+      selector:
+        number:
+          min: 200
+          max: 2000
+          unit_of_measurement: ms
+
+  source_url: https://raw.githubusercontent.com/mmalkus/HA_blueprints/refs/heads/main/room_control/blueprints/multiclick_room_control.yaml
+
+trigger_variables:
+  mqtt_topic: !input mqtt_topic
+  click_action_payload: !input click_action_payload
+
+triggers:
+  - trigger: mqtt
+    topic: "{{ mqtt_topic }}"
+    payload: "{{ click_action_payload }}"
+    id: z2m_click
+  - trigger: event
+    event_type: zha_event
+    event_data:
+      command: !input zha_command
+    id: zha_click
+  - trigger: state
+    entity_id: !input state_entity
+    to: "on"
+    id: state_click
+
+variables:
+  trigger_type: !input trigger_type
+  max_clicks: !input max_clicks
+  click_timeout: !input click_timeout
+  scene_prefix: !input scene_prefix
+  button: !input button
+
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {% if trigger_type == 'z2m' %} {{ trigger.id == 'z2m_click' }}
+              {% elif trigger_type == 'zha' %} {{ trigger.id == 'zha_click' }}
+              {% elif trigger_type == 'state' %} {{ trigger.id == 'state_click' }}
+              {% else %} false {% endif %}
+        sequence:
+          - repeat:
+              count: "{{ max_clicks }}"
+              sequence:
+                - wait_for_trigger:
+                    - trigger: mqtt
+                      topic: "{{ mqtt_topic }}"
+                      payload: "{{ click_action_payload }}"
+                    - trigger: event
+                      event_type: zha_event
+                      event_data:
+                        command: !input zha_command
+                    - trigger: state
+                      entity_id: !input state_entity
+                      to: "on"
+                  timeout:
+                    milliseconds: "{{ click_timeout }}"
+                - if:
+                    - condition: template
+                      value_template: "{{ wait.trigger == None }}"
+                  then:
+                    - action: scene.turn_on
+                      target:
+                        entity_id: >-
+                          {{ 'scene.' ~ scene_prefix ~ '_' ~ button ~ '_' ~ repeat.index }}
+                    - action: script.turn_on
+                      target:
+                        entity_id: >-
+                          {{ 'script.' ~ scene_prefix ~ '_' ~ button ~ '_' ~ repeat.index }}
+                    - stop: ""
+
+mode: single
