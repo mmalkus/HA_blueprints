@@ -1,0 +1,10 @@
+{
+  "domain": "room_control",
+  "name": "Room Control",
+  "version": "0.1.0",
+  "documentation": "https://github.com/mmalkus/HA_blueprints",
+  "requirements": ["ruamel.yaml>=0.17.0"],
+  "dependencies": ["mqtt"],
+  "codeowners": ["@mmalkus"],
+  "iot_class": "local_push"
+}

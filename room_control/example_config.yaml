@@ -1,0 +1,32 @@
+room_control:
+  rooms:
+    living_room:
+      area_id: living_room
+      left:
+        type: light
+        entity_id: light.living_room_ceiling
+      right:
+        type: media_player
+        media_player_entity: media_player.living_room_tv
+      scenes:
+        - name: Evening
+          button: 1
+          clicks: 2
+          lights:
+            - entity: light.living_room_ceiling
+              brightness: 80
+              color_temp: 2700
+        - name: Movie
+          button: 1
+          clicks: 3
+          lights:
+            - entity: light.living_room_floor
+              brightness: 20
+          script_sequence:
+            - action: cover.close_cover
+              target:
+                entity_id: cover.living_room_blinds
+      switches:
+        - type: ptm215z
+          controller_name: "Living Room Switch"
+          controller_event: event.living_room_switch_action

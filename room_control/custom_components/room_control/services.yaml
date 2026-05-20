@@ -1,0 +1,18 @@
+sync:
+  name: Sync Room
+  description: >
+    Regenerate all scenes, scripts, and automations from the room profile.
+    Idempotent — safe to call repeatedly after config changes.
+  fields:
+    area_id:
+      name: Room (optional)
+      description: Sync one room. Omit to sync all rooms.
+      required: false
+      selector:
+        area:
+
+install_blueprints:
+  name: Install Blueprints
+  description: >
+    Copy bundled blueprints (215Z and multiclick_room_control) into
+    HA's blueprints/automation/mmalkus/ directory.
