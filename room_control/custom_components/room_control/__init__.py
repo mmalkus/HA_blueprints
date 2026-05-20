@@ -100,3 +100,29 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     )
 
     return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
+    """Set up a room from a config entry (UI-created room)."""
+    from .schema import parse_config
+
+    hass.data.setdefault(DOMAIN, {"z2m_devices": {}, "profiles": {}})
+    room_data = dict(entry.data)
+
+    # Wrap single room into the parse_config format
+    profiles = parse_config({"rooms": {room_data.get("area_id", entry.entry_id): room_data}})
+    hass.data[DOMAIN]["profiles"].update(profiles)
+
+    for room in profiles.values():
+        await sync_all_scenes(hass, {room.area_id: room})
+        await sync_scripts(hass, room)
+        await sync_automations(hass, room)
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
+    """Unload a config entry (room stays in HA, just stops being managed)."""
+    area_id = entry.data.get("area_id", entry.entry_id)
+    hass.data[DOMAIN].get("profiles", {}).pop(area_id, None)
+    return True

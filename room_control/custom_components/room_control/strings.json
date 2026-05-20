@@ -2,7 +2,86 @@
   "config": {
     "step": {
       "user": {
-        "title": "Room Control"
+        "title": "Room Control — Basic Settings",
+        "description": "Configure a new room. The area_id anchors all generated entity names.",
+        "data": {
+          "area_id": "Area ID (e.g. living_room)",
+          "z2m_base_topic": "Zigbee2MQTT base topic",
+          "default_single_click": "Single click turns device on/off",
+          "hold_delay": "Hold delay (ms)",
+          "dim_speed": "Dimming speed",
+          "volume_speed": "Volume step"
+        }
+      },
+      "left_pair": {
+        "title": "Left Button Pair (buttons 1 & 2)",
+        "description": "Configure the entity controlled by the left pair of buttons.\n{z2m_warning}",
+        "data": {
+          "type": "Entity type",
+          "entity_id": "Light entity",
+          "media_player_entity": "Media player entity"
+        }
+      },
+      "right_pair": {
+        "title": "Right Button Pair (buttons 3 & 4)",
+        "description": "Configure the entity controlled by the right pair of buttons. Select 'none' to skip.\n{z2m_warning}",
+        "data": {
+          "type": "Entity type",
+          "entity_id": "Light entity",
+          "media_player_entity": "Media player entity"
+        }
+      },
+      "add_scene": {
+        "title": "Add Scene ({count} added so far)",
+        "description": "Define a scene triggered by multi-click. Scene name: {area_id}_{button}_{clicks}.",
+        "data": {
+          "name": "Scene name",
+          "button": "Button (1–4)",
+          "clicks": "Clicks to trigger",
+          "light_entity": "Light entity (optional)",
+          "brightness": "Brightness (0–255)",
+          "color_temp": "Color temperature (Kelvin)",
+          "add_another": "Add another scene after this one"
+        }
+      },
+      "add_switch": {
+        "title": "Add Switch ({count} added so far)",
+        "description": "Add a physical switch that will trigger scenes in this room.",
+        "data": {
+          "type": "Switch type",
+          "controller_name": "[PTM 215Z] Z2M friendly name of the switch",
+          "controller_event": "[PTM 215Z] Event entity (optional)",
+          "mqtt_topic": "[Z2M multiclick] MQTT topic",
+          "click_action_payload": "[Z2M multiclick] Single-click payload",
+          "add_another": "Add another switch after this one"
+        }
+      },
+      "confirm": {
+        "title": "Confirm",
+        "description": "Review and save:\n\n{summary}\n\nSaving will generate scenes, scripts, and automations.",
+        "data": {}
+      }
+    },
+    "error": {
+      "required_for_light": "Required when type is light",
+      "required_for_media_player": "Required when type is media_player"
+    },
+    "abort": {
+      "already_configured": "This room (area_id) is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit Room — {area_id}",
+        "description": "Update settings for this room. Saving will re-sync scenes and automations.",
+        "data": {
+          "default_single_click": "Single click turns device on/off",
+          "hold_delay": "Hold delay (ms)",
+          "dim_speed": "Dimming speed",
+          "volume_speed": "Volume step",
+          "left_entity_id": "Left pair — light entity"
+        }
       }
     }
   }
