@@ -22,15 +22,11 @@ _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({}, extra=vol.ALLOW_EXTRA)}, extra=vol.ALLOW_EXTRA)
 
-# Blueprints bundled with this integration (relative to this file)
+# Blueprints bundled inside this package (custom_components/room_control/blueprints/)
+_BUNDLED_BLUEPRINTS_DIR = os.path.join(os.path.dirname(__file__), "blueprints")
 _BLUEPRINT_SOURCES = {
-    "multiclick_room_control.yaml": os.path.join(
-        os.path.dirname(__file__), "..", "..", "blueprints", "multiclick_room_control.yaml"
-    ),
-    # 215Z.yaml ships alongside the integration in the repo root
-    "215Z.yaml": os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "215Z.yaml"
-    ),
+    "215Z.yaml": os.path.join(_BUNDLED_BLUEPRINTS_DIR, "215Z.yaml"),
+    "multiclick_room_control.yaml": os.path.join(_BUNDLED_BLUEPRINTS_DIR, "multiclick_room_control.yaml"),
 }
 
 
