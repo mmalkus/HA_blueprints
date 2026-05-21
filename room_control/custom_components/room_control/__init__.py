@@ -22,26 +22,81 @@ _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({}, extra=vol.ALLOW_EXTRA)}, extra=vol.ALLOW_EXTRA)
 
+# Blueprints bundled with this integration (relative to this file)
+_BLUEPRINT_SOURCES = {
+    "multiclick_room_control.yaml": os.path.join(
+        os.path.dirname(__file__), "..", "..", "blueprints", "multiclick_room_control.yaml"
+    ),
+    # 215Z.yaml ships alongside the integration in the repo root
+    "215Z.yaml": os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "215Z.yaml"
+    ),
+}
+
+
+def _ensure_blueprints(hass: HomeAssistant, force: bool = False) -> list[str]:
+    """Copy bundled blueprints into HA's blueprint dir if not already present.
+
+    With force=True, overwrites existing files (used by the install_blueprints service).
+    Returns list of filenames that were written.
+    """
+    dest_dir = hass.config.path("blueprints", "automation", "mmalkus")
+    os.makedirs(dest_dir, exist_ok=True)
+
+    written = []
+    for fname, src in _BLUEPRINT_SOURCES.items():
+        src = os.path.normpath(src)
+        if not os.path.exists(src):
+            _LOGGER.warning("room_control: bundled blueprint not found at %s", src)
+            continue
+        dst = os.path.normpath(os.path.join(dest_dir, fname))
+        if os.path.exists(dst) and not force:
+            _LOGGER.debug("room_control: blueprint %s already installed, skipping", fname)
+            continue
+        shutil.copy2(src, dst)
+        written.append(fname)
+        _LOGGER.info("room_control: installed blueprint %s → %s", fname, dst)
+
+    return written
+
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up room_control from configuration.yaml."""
     hass.data.setdefault(DOMAIN, {"z2m_devices": {}})
 
     domain_config = config.get(DOMAIN, {})
-    profiles = parse_config(domain_config) if domain_config else {}
+    try:
+        profiles = parse_config(domain_config) if domain_config else {}
+    except Exception:
+        _LOGGER.exception("room_control: failed to parse configuration — check your config")
+        profiles = {}
     hass.data[DOMAIN]["profiles"] = profiles
+
+    # Install blueprints if not already present
+    written = _ensure_blueprints(hass)
+    if written:
+        try:
+            await hass.services.async_call("blueprint", "reload")
+        except Exception:
+            _LOGGER.debug("room_control: blueprint reload skipped (HA not fully started yet)")
 
     # Warm the Z2M device cache for all distinct base topics
     base_topics = {r.z2m_base_topic for r in profiles.values()}
     for topic in base_topics:
-        await cache_z2m_devices(hass, topic)
+        try:
+            await cache_z2m_devices(hass, topic)
+        except Exception:
+            _LOGGER.warning("room_control: could not subscribe to Z2M bridge topic %s", topic)
 
     # Resolve missing Z2M names at startup (YAML path without target_z2m_name)
     for room in profiles.values():
         for pair in (room.left, room.right):
             if pair and pair.type == "light" and not pair.target_z2m_name and pair.entity_id:
                 from .resolvers import resolve_z2m_friendly_name
-                name = await resolve_z2m_friendly_name(hass, pair.entity_id, room.z2m_base_topic)
+                try:
+                    name = await resolve_z2m_friendly_name(hass, pair.entity_id, room.z2m_base_topic)
+                except Exception:
+                    name = None
                 if name:
                     pair.target_z2m_name = name
                 else:
@@ -59,64 +114,58 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             else list(profiles.values())
         )
         for room in targets:
-            await sync_all_scenes(hass, {room.area_id: room})
-            await sync_scripts(hass, room)
-            await sync_automations(hass, room)
+            try:
+                await sync_all_scenes(hass, {room.area_id: room})
+                await sync_scripts(hass, room)
+                await sync_automations(hass, room)
+            except Exception:
+                _LOGGER.exception("room_control: sync failed for room %s", room.area_id)
         _LOGGER.info("room_control: sync complete (%d room(s))", len(targets))
 
     hass.services.async_register(DOMAIN, "sync", handle_sync)
 
-    # Blueprint install service
-    _bundled_blueprints_dir = os.path.join(os.path.dirname(__file__), "..", "..", "blueprints")
-
     async def handle_install_blueprints(call: ServiceCall) -> None:
-        dest_dir = hass.config.path("blueprints", "automation", "mmalkus")
-        os.makedirs(dest_dir, exist_ok=True)
-
-        installed = []
-        for fname in ("215Z.yaml", "multiclick_room_control.yaml"):
-            src = os.path.join(_bundled_blueprints_dir, fname)
-            if not os.path.exists(src):
-                # 215Z.yaml lives one level up alongside this integration
-                src = os.path.join(os.path.dirname(__file__), "..", "..", "..", "215Z.yaml")
-            if not os.path.exists(src):
-                _LOGGER.warning("room_control: bundled blueprint %s not found", fname)
-                continue
-            dst = os.path.join(dest_dir, fname)
-            if os.path.exists(dst):
-                _LOGGER.info("room_control: blueprint %s already installed", fname)
-            shutil.copy2(src, dst)
-            installed.append(fname)
-            _LOGGER.info("room_control: installed blueprint %s → %s", fname, dst)
-
-        if installed:
-            await hass.services.async_call("blueprint", "reload")
+        written = _ensure_blueprints(hass, force=True)
+        if written:
+            try:
+                await hass.services.async_call("blueprint", "reload")
+            except Exception:
+                _LOGGER.warning("room_control: blueprint reload failed after install")
 
     hass.services.async_register(DOMAIN, "install_blueprints", handle_install_blueprints)
 
-    # Sync all rooms on startup
-    hass.async_create_task(
-        hass.services.async_call(DOMAIN, "sync", {})
-    )
+    # Sync all rooms on startup (non-blocking — failures logged, not raised)
+    async def _startup_sync() -> None:
+        try:
+            await hass.services.async_call(DOMAIN, "sync", {})
+        except Exception:
+            _LOGGER.exception("room_control: startup sync failed")
+
+    hass.async_create_task(_startup_sync())
 
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     """Set up a room from a config entry (UI-created room)."""
-    from .schema import parse_config
-
     hass.data.setdefault(DOMAIN, {"z2m_devices": {}, "profiles": {}})
     room_data = dict(entry.data)
 
-    # Wrap single room into the parse_config format
-    profiles = parse_config({"rooms": {room_data.get("area_id", entry.entry_id): room_data}})
+    try:
+        profiles = parse_config({"rooms": {room_data.get("area_id", entry.entry_id): room_data}})
+    except Exception:
+        _LOGGER.exception("room_control: failed to parse config entry %s", entry.entry_id)
+        return False
+
     hass.data[DOMAIN]["profiles"].update(profiles)
 
     for room in profiles.values():
-        await sync_all_scenes(hass, {room.area_id: room})
-        await sync_scripts(hass, room)
-        await sync_automations(hass, room)
+        try:
+            await sync_all_scenes(hass, {room.area_id: room})
+            await sync_scripts(hass, room)
+            await sync_automations(hass, room)
+        except Exception:
+            _LOGGER.exception("room_control: sync failed for entry room %s", room.area_id)
 
     return True
 
